@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { TitleForm } from "@/components/title-form"
 
-export const dynamic = "force_dynamic"
+export const dynamic = "force-dynamic"
 
 async function getTitle(id: string) {
   const titles = await sql`
