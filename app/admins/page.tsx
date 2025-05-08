@@ -1,12 +1,14 @@
 import { paginatedQuery } from "@/lib/db"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Plus, ArrowUpDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Plus, ArrowUpDown, Edit, Trash, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { Pagination } from "@/components/pagination"
 import { DataTableSearch } from "@/components/data-table-search"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toggleAdminStatus } from "@/app/actions/admin-actions"
+import { formatDate } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -17,32 +19,34 @@ async function getAdmins(searchParams: {
   showAll?: string
   sort?: string
   order?: string
+  status?: string
 }) {
   const page = searchParams.page ? Number.parseInt(searchParams.page) : 1
   const pageSize = searchParams.size ? Number.parseInt(searchParams.size) : 10
   const searchTerm = searchParams.q || ""
   const showAll = searchParams.showAll === "true"
-  const sortField = searchParams.sort || "admin_id"
+  const sortField = searchParams.sort || "a.admin_id"
   const sortOrder = searchParams.order || "ASC"
+  const status = searchParams.status || "active" // Default to active admins
 
-  let whereClause = "1=1"
+  let whereClause = status === "active" ? "a.is_deleted = false" : "a.is_deleted = true"
   const params: any[] = []
 
   if (searchTerm) {
-    whereClause += " AND (username ILIKE $1 OR email ILIKE $1 OR role ILIKE $1)"
+    whereClause += " AND (a.username ILIKE $1 OR a.email ILIKE $1 OR a.role ILIKE $1)"
     params.push(`%${searchTerm}%`)
   }
 
   const baseQuery = `
-    SELECT admin_id, username, email, role, created_date
-    FROM admin
+    SELECT a.admin_id, a.username, a.email, a.role, a.created_date, a.is_deleted
+    FROM admin a
     WHERE ${whereClause}
     ORDER BY ${sortField} ${sortOrder}
   `
 
   const countQuery = `
     SELECT COUNT(*) as count
-    FROM admin
+    FROM admin a
     WHERE ${whereClause}
   `
 
@@ -68,6 +72,8 @@ export default async function AdminsPage({
     showAll?: string
     sort?: string
     order?: string
+    status?: string
+    tab?: string
   }
 }) {
   // Default to showing all admins
@@ -76,11 +82,15 @@ export default async function AdminsPage({
     params.showAll = "true"
   }
 
+  // Default to active tab if not specified
+  const activeTab = params.tab || "active"
+  params.status = activeTab
+
   const { data: admins, total, totalPages, page } = await getAdmins(params)
 
   const createSortURL = (field: string) => {
     const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
-    const currentSort = searchParams.sort || "admin_id"
+    const currentSort = searchParams.sort || "a.admin_id"
     const currentOrder = searchParams.order || "ASC"
 
     url.searchParams.set("sort", field)
@@ -93,10 +103,17 @@ export default async function AdminsPage({
     return url.search
   }
 
+  const createTabURL = (tab: string) => {
+    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
+    url.searchParams.set("tab", tab)
+    url.searchParams.delete("page")
+    return url.toString()
+  }
+
   return (
     <div className="flex flex-col gap-4 md:gap-8 pt-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Administrators</h1>
+        <h1 className="text-3xl font-bold">Admins</h1>
         <Button asChild>
           <Link href="/admins/new">
             <Plus className="mr-2 h-4 w-4" /> Add New Admin
@@ -108,90 +125,111 @@ export default async function AdminsPage({
         <DataTableSearch placeholder="Search admins..." />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">
-                <div className="flex items-center space-x-1">
-                  <span>ID</span>
-                  <a href={createSortURL("admin_id")} className="inline-flex">
-                    <ArrowUpDown className="h-4 w-4" />
-                  </a>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center space-x-1">
-                  <span>User</span>
-                  <a href={createSortURL("username")} className="inline-flex">
-                    <ArrowUpDown className="h-4 w-4" />
-                  </a>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center space-x-1">
-                  <span>Email</span>
-                  <a href={createSortURL("email")} className="inline-flex">
-                    <ArrowUpDown className="h-4 w-4" />
-                  </a>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center space-x-1">
-                  <span>Role</span>
-                  <a href={createSortURL("role")} className="inline-flex">
-                    <ArrowUpDown className="h-4 w-4" />
-                  </a>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center space-x-1">
-                  <span>Joined</span>
-                  <a href={createSortURL("created_date")} className="inline-flex">
-                    <ArrowUpDown className="h-4 w-4" />
-                  </a>
-                </div>
-              </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {admins.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  No results found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              admins.map((admin) => (
-                <TableRow key={admin.admin_id}>
-                  <TableCell>{admin.admin_id}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>{admin.username.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{admin.username}</p>
-                      </div>
+      <Tabs defaultValue={activeTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="active" asChild>
+            <Link href={createTabURL("active")}>Active Admins</Link>
+          </TabsTrigger>
+          <TabsTrigger value="deleted" asChild>
+            <Link href={createTabURL("deleted")}>Deleted Admins</Link>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-4">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">
+                    <div className="flex items-center space-x-1">
+                      <span>ID</span>
+                      <a href={createSortURL("a.admin_id")} className="inline-flex">
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
                     </div>
-                  </TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={admin.role === "admin" ? "default" : "secondary"}>{admin.role}</Badge>
-                  </TableCell>
-                  <TableCell>{new Date(admin.created_date).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/admins/${admin.admin_id}`}>Edit</Link>
-                    </Button>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Username</span>
+                      <a href={createSortURL("a.username")} className="inline-flex">
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Role</span>
+                      <a href={createSortURL("a.role")} className="inline-flex">
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Created Date</span>
+                      <a href={createSortURL("a.created_date")} className="inline-flex">
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {admins.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No results found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  admins.map((admin) => (
+                    <TableRow key={admin.admin_id}>
+                      <TableCell>{admin.admin_id}</TableCell>
+                      <TableCell className="font-medium">{admin.username}</TableCell>
+                      <TableCell>{admin.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{admin.role}</Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(admin.created_date)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/admins/${admin.admin_id}/edit`} title="Edit">
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <form
+                            action={async () => {
+                              "use server"
+                              await toggleAdminStatus(admin.admin_id.toString(), admin.is_deleted)
+                            }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={activeTab === "active" ? "Delete" : "Restore"}
+                              className={activeTab === "active" ? "text-destructive" : "text-green-600"}
+                              type="submit"
+                            >
+                              {activeTab === "active" ? (
+                                <Trash className="h-4 w-4" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </form>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Pagination currentPage={page} totalPages={totalPages} totalItems={total} />
     </div>

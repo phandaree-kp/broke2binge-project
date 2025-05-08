@@ -34,10 +34,10 @@ async function getRecentTitles() {
         t.is_deleted,
         o.country, 
         o.language,
-        l.start_date AS sort_date
+        COALESCE(l.start_date, t.original_release_date) AS sort_date
       FROM title t
       JOIN origin o ON t.origin_id = o.origin_id
-      JOIN license l ON t.title_id = l.title_id
+      LEFT JOIN license l ON t.title_id = l.title_id
       WHERE t.is_original = false
     )
     
@@ -73,6 +73,10 @@ async function getRecentTitles() {
   return titles
 }
 
+function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString("en-CA")
+}
+
 export async function RecentTitles() {
   const titles = await getRecentTitles()
 
@@ -95,7 +99,7 @@ export async function RecentTitles() {
           <TableRow key={title.title_id}>
             <TableCell className="font-medium">{title.name}</TableCell>
             <TableCell>{title.type}</TableCell>
-            <TableCell>{new Date(title.original_release_date).toLocaleDateString()}</TableCell>
+            <TableCell>{formatDate(title.original_release_date)}</TableCell>
             <TableCell>
               {title.country} ({title.language})
             </TableCell>

@@ -20,7 +20,9 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Badge } from "@/components/ui/badge"
+import { getExpiringLicensesCount } from "@/app/actions/sidebar-actions"
 
 const mainRoutes = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -43,9 +45,26 @@ export function Sidebar() {
   const pathname = usePathname()
   const [contentOpen, setContentOpen] = useState(true)
   const [adminOpen, setAdminOpen] = useState(true)
+  const [expiringLicenses, setExpiringLicenses] = useState(0)
 
-  // Get expiring licenses count
-  const expiringLicenses = 3
+  useEffect(() => {
+    // Fetch the count of expiring licenses
+    const fetchExpiringLicensesCount = async () => {
+      try {
+        const count = await getExpiringLicensesCount()
+        setExpiringLicenses(count)
+      } catch (error) {
+        console.error("Error fetching expiring licenses count:", error)
+      }
+    }
+
+    fetchExpiringLicensesCount()
+
+    // Set up an interval to refresh the count every 5 minutes
+    const interval = setInterval(fetchExpiringLicensesCount, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="h-screen sticky top-0 bg-background border-r">
@@ -114,9 +133,9 @@ export function Sidebar() {
                         <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
                         {item.name}
                         {item.name === "Licenses" && expiringLicenses > 0 && (
-                          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                          <Badge variant="destructive" className="ml-auto">
                             {expiringLicenses}
-                          </div>
+                          </Badge>
                         )}
                       </Link>
                     )
@@ -149,45 +168,18 @@ export function Sidebar() {
 
             {/* Admin Section */}
             <div className="mb-6">
-              <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-between px-2 py-2 text-sm font-medium rounded-md mb-1"
-                  >
-                    <div className="flex items-center">
-                      <User className="mr-3 h-5 w-5 flex-shrink-0" />
-                      <span>Administration</span>
-                    </div>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform duration-200",
-                        adminOpen ? "transform rotate-180" : "",
-                      )}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  {adminRoutes.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href)
-                    const Icon = item.icon
-
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={cn(
-                          "flex items-center px-2 py-2 text-sm font-medium rounded-md group mb-1 pl-10",
-                          isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
-                        )}
-                      >
-                        <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                        {item.name}
-                      </Link>
-                    )
-                  })}
-                </CollapsibleContent>
-              </Collapsible>
+              <Link
+                href="/admins"
+                className={cn(
+                  "flex items-center px-2 py-2 text-sm font-medium rounded-md group mb-1",
+                  pathname === "/admins" || pathname.startsWith("/admins")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <User className="mr-3 h-5 w-5 flex-shrink-0" />
+                Admins
+              </Link>
             </div>
 
             {/* Quick Access */}
@@ -197,15 +189,15 @@ export function Sidebar() {
               </h3>
               <div className="mt-2">
                 <Link
-                  href="/licenses?status=expiring"
+                  href="/licenses?filter=expiring"
                   className="flex items-center px-2 py-2 text-sm font-medium rounded-md text-destructive hover:bg-muted group"
                 >
                   <AlertTriangle className="mr-3 h-5 w-5 flex-shrink-0" />
-                  Expiring Licenses
+                  Expiring Soon
                   {expiringLicenses > 0 && (
-                    <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                    <Badge variant="destructive" className="ml-auto">
                       {expiringLicenses}
-                    </div>
+                    </Badge>
                   )}
                 </Link>
                 <Link

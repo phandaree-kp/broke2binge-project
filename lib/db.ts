@@ -1,3 +1,5 @@
+console.log("Connecting to Neon database: broke2binge_db")
+
 import { neon } from "@neondatabase/serverless"
 
 // Create a SQL client with the connection string

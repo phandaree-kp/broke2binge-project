@@ -18,8 +18,9 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { TopGenres } from "@/components/top-genres"
+import Link from "next/link"
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force_dynamic"
 
 async function getStats() {
   const [
@@ -130,18 +131,55 @@ async function getContentByType() {
 }
 
 async function getRecentActivity() {
-  // This is a mock query for recent activity
   const recentActivity = await sql`
-    SELECT 'Title Added' as action, 'Stranger Things' as item, NOW() - INTERVAL '2 hours' as timestamp
-    UNION ALL
-    SELECT 'License Renewed' as action, 'The Crown' as item, NOW() - INTERVAL '1 day' as timestamp
-    UNION ALL
-    SELECT 'Title Updated' as action, 'Breaking Bad' as item, NOW() - INTERVAL '3 days' as timestamp
+    WITH combined_activity AS (
+      -- Recently added titles
+      SELECT 
+        'Title Added' as action, 
+        t.name as item, 
+        t.original_release_date as timestamp,
+        t.title_id as id,
+        '/titles/' || t.title_id as link
+      FROM title t
+      WHERE t.original_release_date > NOW() - INTERVAL '30 days'
+      
+      UNION ALL
+      
+      -- Recently added licenses
+      SELECT 
+        'License Added' as action, 
+        t.name as item, 
+        l.start_date as timestamp,
+        l.license_id as id,
+        '/licenses/' || l.license_id as link
+      FROM license l
+      JOIN title t ON l.title_id = t.title_id
+      WHERE l.start_date > NOW() - INTERVAL '30 days'
+      
+      UNION ALL
+      
+      -- Expiring licenses
+      SELECT 
+        'License Expiring' as action, 
+        t.name as item, 
+        l.end_date as timestamp,
+        l.license_id as id,
+        '/licenses/' || l.license_id as link
+      FROM license l
+      JOIN title t ON l.title_id = t.title_id
+      WHERE l.is_active = true AND l.end_date BETWEEN NOW() AND NOW() + INTERVAL '30 days'
+    )
+    SELECT action, item, timestamp, id, link
+    FROM combined_activity
     ORDER BY timestamp DESC
     LIMIT 5
   `
 
   return recentActivity
+}
+
+function formatDate(date: Date) {
+  return new Date(date).toLocaleString()
 }
 
 export default async function DashboardPage() {
@@ -173,18 +211,18 @@ export default async function DashboardPage() {
                 <Badge variant="outline" className="mr-2">
                   Active
                 </Badge>
-                <span>{stats.activeTitles}</span>
+                <span className="text-foreground">{stats.activeTitles}</span>
               </div>
               <div className="flex items-center">
                 <Badge variant="outline" className="mr-2">
                   Deleted
                 </Badge>
-                <span>{stats.deletedTitles}</span>
+                <span className="text-foreground">{stats.deletedTitles}</span>
               </div>
               <div className="flex items-center mt-1">
                 <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
                 <span className="text-emerald-500">{stats.newTitles}</span>
-                <span className="ml-1">new in last 30 days</span>
+                <span className="ml-1 text-foreground">new in last 30 days</span>
               </div>
             </div>
           </CardContent>
@@ -199,7 +237,7 @@ export default async function DashboardPage() {
             <div className="flex items-center pt-1 text-xs text-muted-foreground">
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
               <span className="text-emerald-500">{stats.activeUsers}</span>
-              <span className="ml-1">active in last 30 days</span>
+              <span className="ml-1 text-foreground">active in last 30 days</span>
             </div>
           </CardContent>
         </Card>
@@ -212,7 +250,7 @@ export default async function DashboardPage() {
             <div className="text-2xl font-bold">{Number(stats.totalViews).toLocaleString()}</div>
             <div className="flex items-center pt-1 text-xs text-muted-foreground">
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
-              <span>Across all content</span>
+              <span className="text-foreground">Across all content</span>
             </div>
           </CardContent>
         </Card>
@@ -265,8 +303,11 @@ export default async function DashboardPage() {
                       <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
                       <span className="text-sm font-medium">Expiring Licenses</span>
                     </div>
-                    <Badge variant="outline" className="bg-amber-50">
-                      {stats.expiringLicenses}
+                    <Badge
+                      variant="outline"
+                      className="bg-background dark:text-foreground bg-amber-50 dark:bg-amber-950"
+                    >
+                      <span className="text-foreground">{stats.expiringLicenses}</span>
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -274,8 +315,8 @@ export default async function DashboardPage() {
                       <Clock className="h-4 w-4 text-blue-500 mr-2" />
                       <span className="text-sm font-medium">New Titles (30 days)</span>
                     </div>
-                    <Badge variant="outline" className="bg-blue-50">
-                      {stats.newTitles}
+                    <Badge variant="outline" className="bg-background dark:text-foreground bg-blue-50 dark:bg-blue-950">
+                      <span className="text-foreground">{stats.newTitles}</span>
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -283,8 +324,11 @@ export default async function DashboardPage() {
                       <Film className="h-4 w-4 text-green-500 mr-2" />
                       <span className="text-sm font-medium">Content Providers</span>
                     </div>
-                    <Badge variant="outline" className="bg-green-50">
-                      {stats.providers}
+                    <Badge
+                      variant="outline"
+                      className="bg-background dark:text-foreground bg-green-50 dark:bg-green-950"
+                    >
+                      <span className="text-foreground">{stats.providers}</span>
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -292,8 +336,11 @@ export default async function DashboardPage() {
                       <Users className="h-4 w-4 text-purple-500 mr-2" />
                       <span className="text-sm font-medium">Active Users (30 days)</span>
                     </div>
-                    <Badge variant="outline" className="bg-purple-50">
-                      {stats.activeUsers}
+                    <Badge
+                      variant="outline"
+                      className="bg-background dark:text-foreground bg-purple-50 dark:bg-purple-950"
+                    >
+                      <span className="text-foreground">{stats.activeUsers}</span>
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -301,8 +348,8 @@ export default async function DashboardPage() {
                       <ListPlus className="h-4 w-4 text-rose-500 mr-2" />
                       <span className="text-sm font-medium">Total List Adds</span>
                     </div>
-                    <Badge variant="outline" className="bg-rose-50">
-                      {Number(stats.totalListAdds).toLocaleString()}
+                    <Badge variant="outline" className="bg-background dark:text-foreground bg-rose-50 dark:bg-rose-950">
+                      <span className="text-foreground">{Number(stats.totalListAdds).toLocaleString()}</span>
                     </Badge>
                   </div>
                 </div>
@@ -325,9 +372,12 @@ export default async function DashboardPage() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm font-medium leading-none">
-                          {activity.action}: <span className="font-semibold">{activity.item}</span>
+                          {activity.action}:{" "}
+                          <Link href={activity.link} className="font-semibold hover:underline">
+                            {activity.item}
+                          </Link>
                         </p>
-                        <p className="text-sm text-muted-foreground">{new Date(activity.timestamp).toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">{formatDate(activity.timestamp)}</p>
                       </div>
                     </div>
                   ))}
@@ -469,13 +519,13 @@ export default async function DashboardPage() {
                     <Badge variant="outline" className="mr-2">
                       Active
                     </Badge>
-                    <span>{stats.activeTitles}</span>
+                    <span className="text-foreground">{stats.activeTitles}</span>
                   </div>
                   <div className="flex items-center">
                     <Badge variant="outline" className="mr-2">
                       Deleted
                     </Badge>
-                    <span>{stats.deletedTitles}</span>
+                    <span className="text-foreground">{stats.deletedTitles}</span>
                   </div>
                 </div>
               </CardContent>
@@ -488,7 +538,9 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.providers}</div>
-                <div className="pt-1 text-xs text-muted-foreground">Total active providers</div>
+                <div className="pt-1 text-xs text-muted-foreground">
+                  <span className="text-foreground">Total active providers</span>
+                </div>
               </CardContent>
             </Card>
 
@@ -499,7 +551,9 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.genres}</div>
-                <div className="pt-1 text-xs text-muted-foreground">Content categories</div>
+                <div className="pt-1 text-xs text-muted-foreground">
+                  <span className="text-foreground">Content categories</span>
+                </div>
               </CardContent>
             </Card>
 
@@ -510,7 +564,9 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.expiringLicenses}</div>
-                <div className="pt-1 text-xs text-muted-foreground">Within next 30 days</div>
+                <div className="pt-1 text-xs text-muted-foreground">
+                  <span className="text-foreground">Within next 30 days</span>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -527,33 +583,6 @@ export default async function DashboardPage() {
                   count: Number(item.count),
                 }))}
               />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Management Summary</CardTitle>
-              <CardDescription>Quick access to content management tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border p-4 hover:bg-muted/50 transition-colors">
-                  <h3 className="font-medium mb-1">Add New Title</h3>
-                  <p className="text-sm text-muted-foreground">Create a new content entry</p>
-                </div>
-                <div className="rounded-lg border p-4 hover:bg-muted/50 transition-colors">
-                  <h3 className="font-medium mb-1">Manage Licenses</h3>
-                  <p className="text-sm text-muted-foreground">Review and update licenses</p>
-                </div>
-                <div className="rounded-lg border p-4 hover:bg-muted/50 transition-colors">
-                  <h3 className="font-medium mb-1">Update Genres</h3>
-                  <p className="text-sm text-muted-foreground">Manage content categories</p>
-                </div>
-                <div className="rounded-lg border p-4 hover:bg-muted/50 transition-colors">
-                  <h3 className="font-medium mb-1">Content Providers</h3>
-                  <p className="text-sm text-muted-foreground">Manage provider relationships</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

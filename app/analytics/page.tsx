@@ -140,7 +140,7 @@ export default async function AnalyticsPage() {
           </div>
         </TabsContent>
         <TabsContent value="popular" className="pt-4">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex flex-col gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
@@ -158,6 +158,7 @@ export default async function AnalyticsPage() {
                 />
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
@@ -175,6 +176,7 @@ export default async function AnalyticsPage() {
                 />
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>

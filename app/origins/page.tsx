@@ -144,13 +144,12 @@ export default async function OriginsPage({
                   </a>
                 </div>
               </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {origins.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={4} className="h-24 text-center">
                   No results found.
                 </TableCell>
               </TableRow>
@@ -161,11 +160,6 @@ export default async function OriginsPage({
                   <TableCell className="font-medium">{origin.country}</TableCell>
                   <TableCell>{origin.language}</TableCell>
                   <TableCell>{origin.title_count}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/origins/${origin.origin_id}`}>Edit</Link>
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))
             )}

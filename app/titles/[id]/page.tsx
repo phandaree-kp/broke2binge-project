@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LineChart } from "@/components/charts"
 import Link from "next/link"
-import { ArrowLeft, Edit, Trash, Plus } from "lucide-react"
+import { ArrowLeft, Edit, Trash, Plus, RefreshCw } from "lucide-react"
+import { toggleTitleStatus } from "@/app/actions/title-actions"
 
 export const revalidate = 3600 // Revalidate every hour
 
@@ -127,15 +128,15 @@ export default async function TitlePage({ params }: { params: { id: string } }) 
                 <dt className="text-sm font-medium text-muted-foreground">ID</dt>
                 <dd>{title.title_id}</dd>
               </div>
-              {title.type === "Series" && (
+              {title.type !== "Movie" && (
                 <>
                   <div>
                     <dt className="text-sm font-medium text-muted-foreground">Seasons</dt>
-                    <dd>{title.season_count}</dd>
+                    <dd>{title.season_count || 0}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-muted-foreground">Episodes</dt>
-                    <dd>{title.episode_count}</dd>
+                    <dd>{title.episode_count || 0}</dd>
                   </div>
                 </>
               )}
@@ -156,9 +157,24 @@ export default async function TitlePage({ params }: { params: { id: string } }) 
                   <Edit className="mr-2 h-4 w-4" /> Edit
                 </Link>
               </Button>
-              <Button variant="destructive">
-                <Trash className="mr-2 h-4 w-4" /> Delete
-              </Button>
+              <form
+                action={async () => {
+                  "use server"
+                  await toggleTitleStatus(title.title_id.toString(), title.is_deleted)
+                }}
+              >
+                <Button variant={title.is_deleted ? "default" : "destructive"} type="submit">
+                  {title.is_deleted ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" /> Restore
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="mr-2 h-4 w-4" /> Delete
+                    </>
+                  )}
+                </Button>
+              </form>
             </div>
           </CardContent>
         </Card>
@@ -248,20 +264,37 @@ export default async function TitlePage({ params }: { params: { id: string } }) 
               <CardTitle>User Interactions</CardTitle>
               <CardDescription>Likes and list additions over time</CardDescription>
             </CardHeader>
-            <CardContent className="h-[300px]">
-              {stats.interactionStats.length > 0 ? (
-                <LineChart
-                  data={stats.interactionStats.map((item) => ({
-                    date: item.date,
-                    total_views: item.likes + item.list_adds,
-                    label: "Interactions",
-                  }))}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  No interaction data available
-                </div>
-              )}
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Likes</h3>
+                {stats.interactionStats.length > 0 ? (
+                  <LineChart
+                    data={stats.interactionStats.map((item) => ({
+                      date: item.date,
+                      total_views: Number(item.likes), // Changed from total_views to likes
+                    }))}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                    No like data available
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-medium mb-2">List Additions</h3>
+                {stats.interactionStats.length > 0 ? (
+                  <LineChart
+                    data={stats.interactionStats.map((item) => ({
+                      date: item.date,
+                      total_views: Number(item.list_adds), // Changed from total_views to list_adds
+                    }))}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                    No list addition data available
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { TitleForm } from "@/components/title-form"
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force_dynamic"
 
 async function getTitle(id: string) {
   const titles = await sql`
@@ -47,10 +47,20 @@ async function getAllOrigins() {
   const origins = await sql`
     SELECT origin_id, country, language
     FROM origin
-    ORDER BY country, language
+    ORDER BY origin_id
   `
 
   return origins
+}
+
+async function getAllTypes() {
+  const types = await sql`
+    SELECT DISTINCT type
+    FROM title
+    ORDER BY type
+  `
+
+  return types
 }
 
 export default async function EditTitlePage({ params }: { params: { id: string } }) {
@@ -63,6 +73,7 @@ export default async function EditTitlePage({ params }: { params: { id: string }
   const titleGenres = await getTitleGenres(params.id)
   const allGenres = await getAllGenres()
   const allOrigins = await getAllOrigins()
+  const allTypes = await getAllTypes()
 
   return (
     <div className="flex flex-col gap-4 md:gap-8 pt-6">
@@ -72,6 +83,7 @@ export default async function EditTitlePage({ params }: { params: { id: string }
         titleGenres={titleGenres}
         allGenres={allGenres}
         allOrigins={allOrigins}
+        allTypes={allTypes}
         isEditing={true}
       />
     </div>

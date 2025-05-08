@@ -12,7 +12,6 @@ export async function createTitle(formData: FormData) {
     const isOriginal = formData.get("isOriginal") === "true"
     const seasonCount = type === "Series" ? Number.parseInt(formData.get("seasonCount") as string) : null
     const episodeCount = type === "Series" ? Number.parseInt(formData.get("episodeCount") as string) : null
-    const description = formData.get("description") as string
     const selectedGenres = JSON.parse(formData.get("selectedGenres") as string)
 
     // Insert the title
@@ -25,7 +24,6 @@ export async function createTitle(formData: FormData) {
         is_original, 
         season_count, 
         episode_count, 
-        description,
         is_deleted
       )
       VALUES (
@@ -36,7 +34,6 @@ export async function createTitle(formData: FormData) {
         ${isOriginal}, 
         ${seasonCount}, 
         ${episodeCount}, 
-        ${description},
         false
       )
       RETURNING title_id
@@ -71,7 +68,6 @@ export async function updateTitle(titleId: string, formData: FormData) {
     const isOriginal = formData.get("isOriginal") === "true"
     const seasonCount = type === "Series" ? Number.parseInt(formData.get("seasonCount") as string) : null
     const episodeCount = type === "Series" ? Number.parseInt(formData.get("episodeCount") as string) : null
-    const description = formData.get("description") as string
     const selectedGenres = JSON.parse(formData.get("selectedGenres") as string)
 
     // Update the title
@@ -84,8 +80,7 @@ export async function updateTitle(titleId: string, formData: FormData) {
         original_release_date = ${originalReleaseDate}, 
         is_original = ${isOriginal}, 
         season_count = ${seasonCount}, 
-        episode_count = ${episodeCount}, 
-        description = ${description}
+        episode_count = ${episodeCount}
       WHERE title_id = ${titleId}
     `
 

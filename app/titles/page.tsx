@@ -9,13 +9,15 @@ import { Plus, Filter, ArrowUpDown, History, Trash, Eye, Edit, RefreshCw } from 
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toggleTitleStatus } from "@/app/actions/title-actions"
+import { formatDate } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 
 export const dynamic = "force-dynamic"
 
@@ -23,9 +25,9 @@ async function getTitles(searchParams: {
   page?: string
   size?: string
   q?: string
-  type?: string
-  origin?: string
-  genre?: string
+  type?: string[]
+  origin?: string[]
+  genre?: string[]
   showAll?: string
   sort?: string
   order?: string
@@ -34,9 +36,9 @@ async function getTitles(searchParams: {
   const page = searchParams.page ? Number.parseInt(searchParams.page) : 1
   const pageSize = searchParams.size ? Number.parseInt(searchParams.size) : 10
   const searchTerm = searchParams.q || ""
-  const typeFilter = searchParams.type || ""
-  const originFilter = searchParams.origin || ""
-  const genreFilter = searchParams.genre || ""
+  const typeFilters = searchParams.type || []
+  const originFilters = searchParams.origin || []
+  const genreFilters = searchParams.genre || []
   const showAll = searchParams.showAll === "true"
   const sortField = searchParams.sort || "t.title_id"
   const sortOrder = searchParams.order || "ASC"
@@ -52,29 +54,29 @@ async function getTitles(searchParams: {
     paramIndex++
   }
 
-  if (typeFilter) {
-    whereClause += ` AND t.type = $${paramIndex}`
-    params.push(typeFilter)
-    paramIndex++
+  if (typeFilters.length > 0) {
+    whereClause += ` AND t.type IN (${typeFilters.map((_, i) => `$${paramIndex + i}`).join(", ")})`
+    params.push(...typeFilters)
+    paramIndex += typeFilters.length
   }
 
-  if (originFilter) {
-    whereClause += ` AND o.origin_id = $${paramIndex}`
-    params.push(originFilter)
-    paramIndex++
+  if (originFilters.length > 0) {
+    whereClause += ` AND o.origin_id IN (${originFilters.map((_, i) => `$${paramIndex + i}`).join(", ")})`
+    params.push(...originFilters)
+    paramIndex += originFilters.length
   }
 
-  if (genreFilter) {
-    whereClause += ` AND EXISTS (SELECT 1 FROM title_genre tg WHERE tg.title_id = t.title_id AND tg.genre_id = $${paramIndex})`
-    params.push(genreFilter)
-    paramIndex++
+  if (genreFilters.length > 0) {
+    whereClause += ` AND EXISTS (SELECT 1 FROM title_genre tg WHERE tg.title_id = t.title_id AND tg.genre_id IN (${genreFilters.map((_, i) => `$${paramIndex + i}`).join(", ")}))`
+    params.push(...genreFilters)
+    paramIndex += genreFilters.length
   }
 
   const baseQuery = `
     SELECT t.title_id, t.name, t.type, t.original_release_date, t.is_original, 
            t.season_count, t.episode_count, t.is_deleted,
            o.country, o.language, o.origin_id,
-           ARRAY_AGG(g.name) as genres
+           ARRAY_AGG(DISTINCT g.name) as genres
     FROM title t
     JOIN origin o ON t.origin_id = o.origin_id
     LEFT JOIN title_genre tg ON t.title_id = tg.title_id
@@ -112,7 +114,7 @@ async function getFilterOptions() {
     // Get unique types
     sql`SELECT DISTINCT type FROM title ORDER BY type`,
     // Get all origins
-    sql`SELECT origin_id, country, language FROM origin ORDER BY country, language`,
+    sql`SELECT origin_id, country, language FROM origin ORDER BY origin_id`,
     // Get all genres
     sql`SELECT genre_id, name FROM genre ORDER BY name`,
   ])
@@ -127,9 +129,9 @@ export default async function TitlesPage({
     page?: string
     size?: string
     q?: string
-    type?: string
-    origin?: string
-    genre?: string
+    type?: string | string[]
+    origin?: string | string[]
+    genre?: string | string[]
     showAll?: string
     sort?: string
     order?: string
@@ -147,13 +149,31 @@ export default async function TitlesPage({
   const activeTab = params.tab || "active"
   params.status = activeTab
 
-  const { data: titles, total, totalPages, page } = await getTitles(params)
+  // Convert single values to arrays for filters
+  const processedParams = {
+    ...params,
+    type: params.type ? (Array.isArray(params.type) ? params.type : [params.type]) : [],
+    origin: params.origin ? (Array.isArray(params.origin) ? params.origin : [params.origin]) : [],
+    genre: params.genre ? (Array.isArray(params.genre) ? params.genre : [params.genre]) : [],
+  }
+
+  const { data: titles, total, totalPages, page } = await getTitles(processedParams)
   const filterOptions = await getFilterOptions()
 
+  // Create client-side URL functions
   const createSortURL = (field: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
+    const url = new URL("/titles", "http://localhost:3000")
     const currentSort = searchParams.sort || "t.title_id"
     const currentOrder = searchParams.order || "ASC"
+
+    // Copy all existing search params
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((v) => url.searchParams.append(key, v))
+      } else if (value) {
+        url.searchParams.set(key, value)
+      }
+    })
 
     url.searchParams.set("sort", field)
     if (currentSort === field) {
@@ -166,9 +186,54 @@ export default async function TitlesPage({
   }
 
   const createTabURL = (tab: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
+    const url = new URL("/titles", "http://localhost:3000")
+
+    // Copy all existing search params except tab and status
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (key !== "tab" && key !== "status") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => url.searchParams.append(key, v))
+        } else if (value) {
+          url.searchParams.set(key, value)
+        }
+      }
+    })
+
     url.searchParams.set("tab", tab)
-    url.searchParams.delete("page")
+    return url.pathname + url.search
+  }
+
+  const toggleFilter = (type: "type" | "origin" | "genre", value: string) => {
+    const url = new URL("/titles", "http://localhost:3000")
+
+    // Copy all existing search params
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (key !== type) {
+        if (Array.isArray(value)) {
+          value.forEach((v) => url.searchParams.append(key, v))
+        } else if (value) {
+          url.searchParams.set(key, value)
+        }
+      }
+    })
+
+    // Get current values as array
+    const currentValues = Array.isArray(searchParams[type])
+      ? (searchParams[type] as string[])
+      : searchParams[type]
+        ? [searchParams[type] as string]
+        : []
+
+    if (currentValues.includes(value)) {
+      // Remove value if already exists
+      const newValues = currentValues.filter((v) => v !== value)
+      newValues.forEach((v) => url.searchParams.append(type, v))
+    } else {
+      // Add value if doesn't exist
+      ;[...currentValues, value].forEach((v) => url.searchParams.append(type, v))
+    }
+
+    url.searchParams.set("page", "1")
     return url.toString()
   }
 
@@ -190,94 +255,96 @@ export default async function TitlesPage({
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Filter className="mr-2 h-4 w-4" /> Filter
+                {(processedParams.type.length > 0 ||
+                  processedParams.origin.length > 0 ||
+                  processedParams.genre.length > 0) && (
+                  <Badge variant="secondary" className="ml-2">
+                    {processedParams.type.length + processedParams.origin.length + processedParams.genre.length}
+                  </Badge>
+                )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-[350px] max-h-[500px] overflow-auto">
               <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={!searchParams.type}
-                onCheckedChange={() => {
-                  const url = new URL(window.location.href)
-                  url.searchParams.delete("type")
-                  url.searchParams.set("page", "1")
-                  window.location.href = url.toString()
-                }}
-              >
-                All Types
-              </DropdownMenuCheckboxItem>
-              {filterOptions.types.map((type) => (
-                <DropdownMenuCheckboxItem
-                  key={type.type}
-                  checked={searchParams.type === type.type}
-                  onCheckedChange={() => {
-                    const url = new URL(window.location.href)
-                    url.searchParams.set("type", type.type)
-                    url.searchParams.set("page", "1")
-                    window.location.href = url.toString()
-                  }}
-                >
-                  {type.type}
-                </DropdownMenuCheckboxItem>
-              ))}
+              <div className="p-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {filterOptions.types.map((type) => (
+                    <div key={type.type} className="flex items-center space-x-1">
+                      <Checkbox
+                        id={`type-${type.type}`}
+                        checked={processedParams.type.includes(type.type)}
+                        onCheckedChange={() => {}}
+                      />
+                      <Label htmlFor={`type-${type.type}`} className="text-xs">
+                        <Link href={toggleFilter("type", type.type)} className="w-full h-full block">
+                          {type.type}
+                        </Link>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Filter by Origin</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={!searchParams.origin}
-                onCheckedChange={() => {
-                  const url = new URL(window.location.href)
-                  url.searchParams.delete("origin")
-                  url.searchParams.set("page", "1")
-                  window.location.href = url.toString()
-                }}
-              >
-                All Origins
-              </DropdownMenuCheckboxItem>
-              {filterOptions.origins.map((origin) => (
-                <DropdownMenuCheckboxItem
-                  key={origin.origin_id}
-                  checked={searchParams.origin === origin.origin_id.toString()}
-                  onCheckedChange={() => {
-                    const url = new URL(window.location.href)
-                    url.searchParams.set("origin", origin.origin_id.toString())
-                    url.searchParams.set("page", "1")
-                    window.location.href = url.toString()
-                  }}
-                >
-                  {origin.country} ({origin.language})
-                </DropdownMenuCheckboxItem>
-              ))}
+              <div className="p-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {filterOptions.origins.map((origin) => (
+                    <div key={origin.origin_id} className="flex items-center space-x-1">
+                      <Checkbox
+                        id={`origin-${origin.origin_id}`}
+                        checked={processedParams.origin.includes(origin.origin_id.toString())}
+                        onCheckedChange={() => {}}
+                      />
+                      <Label htmlFor={`origin-${origin.origin_id}`} className="text-xs">
+                        <Link
+                          href={toggleFilter("origin", origin.origin_id.toString())}
+                          className="w-full h-full block"
+                        >
+                          {origin.country}
+                        </Link>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Filter by Genre</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={!searchParams.genre}
-                onCheckedChange={() => {
-                  const url = new URL(window.location.href)
-                  url.searchParams.delete("genre")
-                  url.searchParams.set("page", "1")
-                  window.location.href = url.toString()
-                }}
-              >
-                All Genres
-              </DropdownMenuCheckboxItem>
-              {filterOptions.genres.map((genre) => (
-                <DropdownMenuCheckboxItem
-                  key={genre.genre_id}
-                  checked={searchParams.genre === genre.genre_id.toString()}
-                  onCheckedChange={() => {
-                    const url = new URL(window.location.href)
-                    url.searchParams.set("genre", genre.genre_id.toString())
-                    url.searchParams.set("page", "1")
-                    window.location.href = url.toString()
-                  }}
-                >
-                  {genre.name}
-                </DropdownMenuCheckboxItem>
-              ))}
+              <div className="p-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {filterOptions.genres.map((genre) => (
+                    <div key={genre.genre_id} className="flex items-center space-x-1">
+                      <Checkbox
+                        id={`genre-${genre.genre_id}`}
+                        checked={processedParams.genre.includes(genre.genre_id.toString())}
+                        onCheckedChange={() => {}}
+                      />
+                      <Label htmlFor={`genre-${genre.genre_id}`} className="text-xs">
+                        <Link href={toggleFilter("genre", genre.genre_id.toString())} className="w-full h-full block">
+                          {genre.name}
+                        </Link>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {(processedParams.type.length > 0 ||
+                processedParams.origin.length > 0 ||
+                processedParams.genre.length > 0) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="p-2 flex justify-end">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/titles">Clear Filters</Link>
+                    </Button>
+                  </div>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -343,14 +410,14 @@ export default async function TitlesPage({
                       <TableCell>{title.title_id}</TableCell>
                       <TableCell className="font-medium">{title.name}</TableCell>
                       <TableCell>{title.type}</TableCell>
-                      <TableCell>{new Date(title.original_release_date).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDate(title.original_release_date)}</TableCell>
                       <TableCell>
                         {title.country} ({title.language})
                       </TableCell>
                       <TableCell>
-                        {title.type === "Series"
-                          ? `${title.season_count} seasons / ${title.episode_count} episodes`
-                          : "N/A"}
+                        {title.type === "Movie"
+                          ? "N/A"
+                          : `${title.season_count !== null ? title.season_count : 0} seasons / ${title.episode_count !== null ? title.episode_count : 0} episodes`}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">

@@ -136,13 +136,12 @@ export default async function GenresPage({
                   </a>
                 </div>
               </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {genres.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   No results found.
                 </TableCell>
               </TableRow>
@@ -152,11 +151,6 @@ export default async function GenresPage({
                   <TableCell>{genre.genre_id}</TableCell>
                   <TableCell className="font-medium">{genre.name}</TableCell>
                   <TableCell>{genre.title_count}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/genres/${genre.genre_id}`}>Edit</Link>
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))
             )}
