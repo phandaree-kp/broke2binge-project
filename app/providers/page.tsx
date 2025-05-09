@@ -6,7 +6,6 @@ import { Plus, ArrowUpDown, Eye, Edit, Trash, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { Pagination } from "@/components/pagination"
 import { DataTableSearch } from "@/components/data-table-search"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toggleProviderStatus } from "@/app/actions/provider-actions"
 
 export const dynamic = "force-dynamic"
@@ -129,105 +128,109 @@ export default async function ProvidersPage({
         <DataTableSearch placeholder="Search providers..." />
       </div>
 
-      <Tabs defaultValue={status} className="w-full">
-        <TabsList>
-          <TabsTrigger value="active">
-            <a href="/providers?status=active">Active Providers</a>
-          </TabsTrigger>
-          <TabsTrigger value="deleted">
-            <a href="/providers?status=deleted">Deleted Providers</a>
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex border-b">
+        <a
+          href="/providers?status=active"
+          className={`px-4 py-2 ${status === "active" ? "border-b-2 border-primary font-medium" : ""}`}
+        >
+          Active Providers
+        </a>
+        <a
+          href="/providers?status=deleted"
+          className={`px-4 py-2 ${status === "deleted" ? "border-b-2 border-primary font-medium" : ""}`}
+        >
+          Deleted Providers
+        </a>
+      </div>
 
-        <TabsContent value={status} className="mt-4">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
+      <div className="mt-4">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px]">
+                  <div className="flex items-center space-x-1">
+                    <span>ID</span>
+                    <a href={createSortURL("cp.provider_id")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center space-x-1">
+                    <span>Name</span>
+                    <a href={createSortURL("cp.name")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>
+                  <div className="flex items-center space-x-1">
+                    <span>Licenses</span>
+                    <a href={createSortURL("license_count")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {providers.length === 0 ? (
                 <TableRow>
-                  <TableHead className="w-[80px]">
-                    <div className="flex items-center space-x-1">
-                      <span>ID</span>
-                      <a href={createSortURL("cp.provider_id")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center space-x-1">
-                      <span>Name</span>
-                      <a href={createSortURL("cp.name")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>
-                    <div className="flex items-center space-x-1">
-                      <span>Licenses</span>
-                      <a href={createSortURL("license_count")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No results found.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {providers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No results found.
+              ) : (
+                providers.map((provider) => (
+                  <TableRow key={provider.provider_id}>
+                    <TableCell>{provider.provider_id}</TableCell>
+                    <TableCell className="font-medium">{provider.name}</TableCell>
+                    <TableCell>{provider.email}</TableCell>
+                    <TableCell>{provider.phone}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{provider.license_count}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/providers/${provider.provider_id}`} title="View">
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/providers/${provider.provider_id}/edit`} title="Edit">
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <form
+                          action={async () => {
+                            "use server"
+                            await toggleProviderStatus(provider.provider_id.toString(), provider.is_deleted)
+                          }}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={status === "active" ? "Delete" : "Restore"}
+                            className={status === "active" ? "text-destructive" : "text-green-600"}
+                            type="submit"
+                          >
+                            {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                        </form>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  providers.map((provider) => (
-                    <TableRow key={provider.provider_id}>
-                      <TableCell>{provider.provider_id}</TableCell>
-                      <TableCell className="font-medium">{provider.name}</TableCell>
-                      <TableCell>{provider.email}</TableCell>
-                      <TableCell>{provider.phone}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{provider.license_count}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/providers/${provider.provider_id}`} title="View">
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/providers/${provider.provider_id}/edit`} title="Edit">
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <form
-                            action={async () => {
-                              "use server"
-                              await toggleProviderStatus(provider.provider_id.toString(), provider.is_deleted)
-                            }}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title={status === "active" ? "Delete" : "Restore"}
-                              className={status === "active" ? "text-destructive" : "text-green-600"}
-                              type="submit"
-                            >
-                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-                            </Button>
-                          </form>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-      </Tabs>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
       <Pagination currentPage={page} totalPages={totalPages} totalItems={total} />
     </div>

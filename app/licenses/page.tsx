@@ -6,7 +6,6 @@ import { Plus, ArrowUpDown, Edit, Trash, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { Pagination } from "@/components/pagination"
 import { DataTableSearch } from "@/components/data-table-search"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toggleLicenseStatus } from "@/app/actions/license-actions"
 import { formatDate } from "@/lib/utils"
 
@@ -166,147 +165,143 @@ export default async function LicensesPage({
         </div>
       </div>
 
-      <Tabs defaultValue={status} className="w-full">
-        <TabsList>
-          <TabsTrigger value="active">
-            <a href={`/licenses?status=active${activeFilter !== "all" ? `&filter=${activeFilter}` : ""}`}>
-              Active Licenses
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value="deleted">
-            <a href={`/licenses?status=deleted${activeFilter !== "all" ? `&filter=${activeFilter}` : ""}`}>
-              Deleted Licenses
-            </a>
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex border-b">
+        <a
+          href={`/licenses?status=active${activeFilter !== "all" ? `&filter=${activeFilter}` : ""}`}
+          className={`px-4 py-2 ${status === "active" ? "border-b-2 border-primary font-medium" : ""}`}
+        >
+          Active Licenses
+        </a>
+        <a
+          href={`/licenses?status=deleted${activeFilter !== "all" ? `&filter=${activeFilter}` : ""}`}
+          className={`px-4 py-2 ${status === "deleted" ? "border-b-2 border-primary font-medium" : ""}`}
+        >
+          Deleted Licenses
+        </a>
+      </div>
 
-        <TabsContent value={status} className="mt-4">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
+      <div className="mt-4">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px]">
+                  <div className="flex items-center space-x-1">
+                    <span>ID</span>
+                    <a href={createSortURL("l.license_id")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center space-x-1">
+                    <span>Title</span>
+                    <a href={createSortURL("t.name")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center space-x-1">
+                    <span>Provider</span>
+                    <a href={createSortURL("cp.name")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center space-x-1">
+                    <span>Start Date</span>
+                    <a href={createSortURL("l.start_date")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center space-x-1">
+                    <span>End Date</span>
+                    <a href={createSortURL("l.end_date")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </a>
+                  </div>
+                </TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {licenses.length === 0 ? (
                 <TableRow>
-                  <TableHead className="w-[80px]">
-                    <div className="flex items-center space-x-1">
-                      <span>ID</span>
-                      <a href={createSortURL("l.license_id")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center space-x-1">
-                      <span>Title</span>
-                      <a href={createSortURL("t.name")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center space-x-1">
-                      <span>Provider</span>
-                      <a href={createSortURL("cp.name")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center space-x-1">
-                      <span>Start Date</span>
-                      <a href={createSortURL("l.start_date")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center space-x-1">
-                      <span>End Date</span>
-                      <a href={createSortURL("l.end_date")}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    No results found.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {licenses.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      No results found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  licenses.map((license) => {
-                    const daysRemaining = Number(license.days_remaining)
-                    const isExpiringSoon = daysRemaining > 0 && daysRemaining <= 30
+              ) : (
+                licenses.map((license) => {
+                  const daysRemaining = Number(license.days_remaining)
+                  const isExpiringSoon = daysRemaining > 0 && daysRemaining <= 30
 
-                    return (
-                      <TableRow key={license.license_id}>
-                        <TableCell>{license.license_id}</TableCell>
-                        <TableCell className="font-medium">
-                          <Link href={`/titles/${license.title_id}`} className="hover:underline">
-                            {license.title_name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link href={`/providers/${license.provider_id}`} className="hover:underline">
-                            {license.provider_name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{formatDate(license.start_date)}</TableCell>
-                        <TableCell>{formatDate(license.end_date)}</TableCell>
-                        <TableCell>
-                          {license.is_active ? (
-                            isExpiringSoon ? (
-                              <Badge variant="warning" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                Expires in {daysRemaining} days
-                              </Badge>
-                            ) : (
-                              <Badge variant="default">Active</Badge>
-                            )
+                  return (
+                    <TableRow key={license.license_id}>
+                      <TableCell>{license.license_id}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link href={`/titles/${license.title_id}`} className="hover:underline">
+                          {license.title_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/providers/${license.provider_id}`} className="hover:underline">
+                          {license.provider_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{formatDate(license.start_date)}</TableCell>
+                      <TableCell>{formatDate(license.end_date)}</TableCell>
+                      <TableCell>
+                        {license.is_active ? (
+                          isExpiringSoon ? (
+                            <Badge variant="warning" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                              Expires in {daysRemaining} days
+                            </Badge>
                           ) : (
-                            <Badge variant="outline">Inactive</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link href={`/licenses/${license.license_id}/edit`} title="Edit">
-                                <Edit className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                            <form
-                              action={async () => {
-                                "use server"
-                                await toggleLicenseStatus(license.license_id.toString(), license.is_deleted)
-                              }}
+                            <Badge variant="default">Active</Badge>
+                          )
+                        ) : (
+                          <Badge variant="outline">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/licenses/${license.license_id}/edit`} title="Edit">
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <form
+                            action={async () => {
+                              "use server"
+                              await toggleLicenseStatus(license.license_id.toString(), license.is_deleted)
+                            }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={status === "active" ? "Delete" : "Restore"}
+                              className={status === "active" ? "text-destructive" : "text-green-600"}
+                              type="submit"
                             >
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title={status === "active" ? "Delete" : "Restore"}
-                                className={status === "active" ? "text-destructive" : "text-green-600"}
-                                type="submit"
-                              >
-                                {status === "active" ? (
-                                  <Trash className="h-4 w-4" />
-                                ) : (
-                                  <RefreshCw className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </form>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-      </Tabs>
+                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                            </Button>
+                          </form>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
       <Pagination currentPage={page} totalPages={totalPages} totalItems={total} />
     </div>
