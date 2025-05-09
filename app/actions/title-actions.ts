@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
 export async function createTitle(formData: FormData) {
   try {
@@ -10,8 +11,16 @@ export async function createTitle(formData: FormData) {
     const originId = formData.get("originId") as string
     const originalReleaseDate = formData.get("originalReleaseDate") as string
     const isOriginal = formData.get("isOriginal") === "true"
-    const seasonCount = type === "Series" ? Number.parseInt(formData.get("seasonCount") as string) : null
-    const episodeCount = type === "Series" ? Number.parseInt(formData.get("episodeCount") as string) : null
+
+    // Fix: Properly handle season and episode counts
+    let seasonCount = null
+    let episodeCount = null
+
+    if (type !== "Movie") {
+      seasonCount = Number.parseInt(formData.get("seasonCount") as string) || 0
+      episodeCount = Number.parseInt(formData.get("episodeCount") as string) || 0
+    }
+
     const selectedGenres = JSON.parse(formData.get("selectedGenres") as string)
 
     // Insert the title
@@ -52,6 +61,7 @@ export async function createTitle(formData: FormData) {
     }
 
     revalidatePath("/titles")
+    redirect("/titles")
     return { success: true, titleId }
   } catch (error) {
     console.error("Error creating title:", error)
@@ -66,8 +76,16 @@ export async function updateTitle(titleId: string, formData: FormData) {
     const originId = formData.get("originId") as string
     const originalReleaseDate = formData.get("originalReleaseDate") as string
     const isOriginal = formData.get("isOriginal") === "true"
-    const seasonCount = type === "Series" ? Number.parseInt(formData.get("seasonCount") as string) : null
-    const episodeCount = type === "Series" ? Number.parseInt(formData.get("episodeCount") as string) : null
+
+    // Fix: Properly handle season and episode counts
+    let seasonCount = null
+    let episodeCount = null
+
+    if (type !== "Movie") {
+      seasonCount = Number.parseInt(formData.get("seasonCount") as string) || 0
+      episodeCount = Number.parseInt(formData.get("episodeCount") as string) || 0
+    }
+
     const selectedGenres = JSON.parse(formData.get("selectedGenres") as string)
 
     // Update the title
@@ -102,6 +120,7 @@ export async function updateTitle(titleId: string, formData: FormData) {
 
     revalidatePath(`/titles/${titleId}`)
     revalidatePath("/titles")
+    redirect(`/titles/${titleId}`)
     return { success: true }
   } catch (error) {
     console.error("Error updating title:", error)

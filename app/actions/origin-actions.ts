@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
 export async function createOrigin(formData: FormData) {
   try {
@@ -14,6 +15,7 @@ export async function createOrigin(formData: FormData) {
     `
 
     revalidatePath("/origins")
+    redirect("/origins")
     return { success: true }
   } catch (error) {
     console.error("Error creating origin:", error)
@@ -33,6 +35,7 @@ export async function updateOrigin(originId: string, formData: FormData) {
     `
 
     revalidatePath("/origins")
+    redirect("/origins")
     return { success: true }
   } catch (error) {
     console.error("Error updating origin:", error)

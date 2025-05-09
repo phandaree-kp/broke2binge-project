@@ -10,7 +10,7 @@ import Link from "next/link"
 import { ArrowLeft, Edit, Trash, Plus, RefreshCw } from "lucide-react"
 import { toggleTitleStatus } from "@/app/actions/title-actions"
 
-export const revalidate = 3600 // Revalidate every hour
+export const dynamic = "force-dynamic"
 
 async function getTitle(id: string) {
   const titles = await sql`
@@ -230,6 +230,86 @@ export default async function TitlePage({ params }: { params: { id: string } }) 
           </CardContent>
         </Card>
       </div>
+
+      {/* View Count Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>View Statistics</CardTitle>
+          <CardDescription>View count data for this title</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            {stats.viewStats.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Views</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.viewStats.map((stat, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{new Date(stat.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{stat.views}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">No view data available</div>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button asChild>
+              <Link href={`/titles/${title.title_id}/views/add`}>
+                <Plus className="mr-2 h-4 w-4" /> Add View Data
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Interaction Stats Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Interaction Statistics</CardTitle>
+          <CardDescription>User interaction data for this title</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            {stats.interactionStats.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Likes</TableHead>
+                    <TableHead>List Additions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.interactionStats.map((stat, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{new Date(stat.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{stat.likes}</TableCell>
+                      <TableCell>{stat.list_adds}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">No interaction data available</div>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button asChild>
+              <Link href={`/titles/${title.title_id}/interactions/add`}>
+                <Plus className="mr-2 h-4 w-4" /> Add Interaction Data
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="views" className="mt-6">
         <TabsList>

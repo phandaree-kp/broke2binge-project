@@ -36,6 +36,10 @@ export default function NewProviderPage() {
               <Label htmlFor="phone">Phone</Label>
               <Input id="phone" name="phone" required />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="address">Address</Label>
+              <Input id="address" name="address" required />
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" asChild>
                 <Link href="/providers">Cancel</Link>

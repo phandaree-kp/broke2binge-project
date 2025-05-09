@@ -10,7 +10,7 @@ import { notFound, redirect } from "next/navigation"
 
 async function getAdmin(id: string) {
   const admins = await sql`
-    SELECT admin_id, username, email, role
+    SELECT admin_id, username, email, role, created_date
     FROM admin
     WHERE admin_id = ${id}
   `
@@ -89,6 +89,16 @@ export default async function EditAdminPage({ params }: { params: { id: string }
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="createdDate">Created Date</Label>
+              <Input
+                id="createdDate"
+                name="createdDate"
+                type="text"
+                defaultValue={new Date(admin.created_date).toLocaleString()}
+                disabled
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" asChild>

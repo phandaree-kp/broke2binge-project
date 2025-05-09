@@ -9,7 +9,7 @@ import { notFound, redirect } from "next/navigation"
 
 async function getProvider(id: string) {
   const providers = await sql`
-    SELECT provider_id, name, email, phone
+    SELECT provider_id, name, email, phone, address
     FROM contentprovider
     WHERE provider_id = ${id}
   `
@@ -56,6 +56,10 @@ export default async function EditProviderPage({ params }: { params: { id: strin
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone</Label>
               <Input id="phone" name="phone" defaultValue={provider.phone} required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="address">Address</Label>
+              <Input id="address" name="address" defaultValue={provider.address || ""} required />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" asChild>

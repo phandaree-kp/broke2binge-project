@@ -3,7 +3,7 @@
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
 import { useState, useEffect } from "react"
-import { Bell, Menu, Search } from "lucide-react"
+import { Bell, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar } from "@/components/sidebar"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { getNotifications } from "@/app/actions/notification-actions"
@@ -39,18 +38,7 @@ export function Header() {
         </SheetContent>
       </Sheet>
 
-      <div className="hidden md:flex md:flex-1">
-        <form className="w-full max-w-lg">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search across all content..."
-              className="w-full bg-background pl-8 md:w-[300px] lg:w-[400px]"
-            />
-          </div>
-        </form>
-      </div>
+      <div className="flex-1"></div>
 
       <div className="flex items-center gap-2">
         <NotificationsMenu />

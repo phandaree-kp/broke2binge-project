@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
 export async function createGenre(formData: FormData) {
   try {
@@ -13,6 +14,7 @@ export async function createGenre(formData: FormData) {
     `
 
     revalidatePath("/genres")
+    redirect("/genres")
     return { success: true }
   } catch (error) {
     console.error("Error creating genre:", error)
@@ -31,6 +33,7 @@ export async function updateGenre(genreId: string, formData: FormData) {
     `
 
     revalidatePath("/genres")
+    redirect("/genres")
     return { success: true }
   } catch (error) {
     console.error("Error updating genre:", error)

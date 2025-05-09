@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
 export async function createLicense(formData: FormData) {
   try {
@@ -19,6 +20,7 @@ export async function createLicense(formData: FormData) {
 
     revalidatePath("/licenses")
     revalidatePath(`/titles/${titleId}`)
+    redirect("/licenses")
     return { success: true }
   } catch (error) {
     console.error("Error creating license:", error)
@@ -44,6 +46,7 @@ export async function updateLicense(licenseId: string, formData: FormData) {
     revalidatePath(`/licenses/${licenseId}`)
     revalidatePath("/licenses")
     revalidatePath(`/titles/${titleId}`)
+    redirect("/licenses")
     return { success: true }
   } catch (error) {
     console.error("Error updating license:", error)

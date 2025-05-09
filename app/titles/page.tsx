@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toggleTitleStatus } from "@/app/actions/title-actions"
-import { formatDate } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 
@@ -76,7 +75,7 @@ async function getTitles(searchParams: {
     SELECT t.title_id, t.name, t.type, t.original_release_date, t.is_original, 
            t.season_count, t.episode_count, t.is_deleted,
            o.country, o.language, o.origin_id,
-           ARRAY_AGG(DISTINCT g.name) as genres
+           ARRAY_AGG(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL) as genres
     FROM title t
     JOIN origin o ON t.origin_id = o.origin_id
     LEFT JOIN title_genre tg ON t.title_id = tg.title_id
@@ -114,7 +113,7 @@ async function getFilterOptions() {
     // Get unique types
     sql`SELECT DISTINCT type FROM title ORDER BY type`,
     // Get all origins
-    sql`SELECT origin_id, country, language FROM origin ORDER BY origin_id`,
+    sql`SELECT origin_id, country, language FROM origin ORDER BY country`,
     // Get all genres
     sql`SELECT genre_id, name FROM genre ORDER BY name`,
   ])
@@ -136,7 +135,6 @@ export default async function TitlesPage({
     sort?: string
     order?: string
     status?: string
-    tab?: string
   }
 }) {
   // Default to showing all titles
@@ -146,8 +144,8 @@ export default async function TitlesPage({
   }
 
   // Default to active tab if not specified
-  const activeTab = params.tab || "active"
-  params.status = activeTab
+  const status = searchParams.status || "active"
+  params.status = status
 
   // Convert single values to arrays for filters
   const processedParams = {
@@ -162,79 +160,29 @@ export default async function TitlesPage({
 
   // Create client-side URL functions
   const createSortURL = (field: string) => {
-    const url = new URL("/titles", "http://localhost:3000")
+    const url = new URLSearchParams()
     const currentSort = searchParams.sort || "t.title_id"
     const currentOrder = searchParams.order || "ASC"
 
     // Copy all existing search params
     Object.entries(searchParams).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((v) => url.searchParams.append(key, v))
-      } else if (value) {
-        url.searchParams.set(key, value)
+      if (key !== "sort" && key !== "order") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => url.append(key, v))
+        } else if (value) {
+          url.append(key, value)
+        }
       }
     })
 
-    url.searchParams.set("sort", field)
+    url.set("sort", field)
     if (currentSort === field) {
-      url.searchParams.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
+      url.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
     } else {
-      url.searchParams.set("order", "ASC")
+      url.set("order", "ASC")
     }
 
-    return url.search
-  }
-
-  const createTabURL = (tab: string) => {
-    const url = new URL("/titles", "http://localhost:3000")
-
-    // Copy all existing search params except tab and status
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (key !== "tab" && key !== "status") {
-        if (Array.isArray(value)) {
-          value.forEach((v) => url.searchParams.append(key, v))
-        } else if (value) {
-          url.searchParams.set(key, value)
-        }
-      }
-    })
-
-    url.searchParams.set("tab", tab)
-    return url.pathname + url.search
-  }
-
-  const toggleFilter = (type: "type" | "origin" | "genre", value: string) => {
-    const url = new URL("/titles", "http://localhost:3000")
-
-    // Copy all existing search params
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (key !== type) {
-        if (Array.isArray(value)) {
-          value.forEach((v) => url.searchParams.append(key, v))
-        } else if (value) {
-          url.searchParams.set(key, value)
-        }
-      }
-    })
-
-    // Get current values as array
-    const currentValues = Array.isArray(searchParams[type])
-      ? (searchParams[type] as string[])
-      : searchParams[type]
-        ? [searchParams[type] as string]
-        : []
-
-    if (currentValues.includes(value)) {
-      // Remove value if already exists
-      const newValues = currentValues.filter((v) => v !== value)
-      newValues.forEach((v) => url.searchParams.append(type, v))
-    } else {
-      // Add value if doesn't exist
-      ;[...currentValues, value].forEach((v) => url.searchParams.append(type, v))
-    }
-
-    url.searchParams.set("page", "1")
-    return url.toString()
+    return `?${url.toString()}`
   }
 
   return (
@@ -264,103 +212,102 @@ export default async function TitlesPage({
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[350px] max-h-[500px] overflow-auto">
-              <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-2">
-                <div className="grid grid-cols-3 gap-1">
-                  {filterOptions.types.map((type) => (
-                    <div key={type.type} className="flex items-center space-x-1">
-                      <Checkbox
-                        id={`type-${type.type}`}
-                        checked={processedParams.type.includes(type.type)}
-                        onCheckedChange={() => {}}
-                      />
-                      <Label htmlFor={`type-${type.type}`} className="text-xs">
-                        <Link href={toggleFilter("type", type.type)} className="w-full h-full block">
+            <DropdownMenuContent align="end" className="w-[400px] max-h-[500px] overflow-auto">
+              <form action="/titles" method="get">
+                {/* Preserve existing query parameters */}
+                <input type="hidden" name="status" value={status} />
+                {searchParams.q && <input type="hidden" name="q" value={searchParams.q} />}
+                {searchParams.sort && <input type="hidden" name="sort" value={searchParams.sort} />}
+                {searchParams.order && <input type="hidden" name="order" value={searchParams.order} />}
+
+                <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="p-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {filterOptions.types.map((type) => (
+                      <div key={type.type} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`type-${type.type}`}
+                          name="type"
+                          value={type.type}
+                          defaultChecked={processedParams.type.includes(type.type)}
+                        />
+                        <Label htmlFor={`type-${type.type}`} className="text-sm">
                           {type.type}
-                        </Link>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Filter by Origin</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-2">
-                <div className="grid grid-cols-3 gap-1">
-                  {filterOptions.origins.map((origin) => (
-                    <div key={origin.origin_id} className="flex items-center space-x-1">
-                      <Checkbox
-                        id={`origin-${origin.origin_id}`}
-                        checked={processedParams.origin.includes(origin.origin_id.toString())}
-                        onCheckedChange={() => {}}
-                      />
-                      <Label htmlFor={`origin-${origin.origin_id}`} className="text-xs">
-                        <Link
-                          href={toggleFilter("origin", origin.origin_id.toString())}
-                          className="w-full h-full block"
-                        >
-                          {origin.country}
-                        </Link>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Filter by Genre</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-2">
-                <div className="grid grid-cols-3 gap-1">
-                  {filterOptions.genres.map((genre) => (
-                    <div key={genre.genre_id} className="flex items-center space-x-1">
-                      <Checkbox
-                        id={`genre-${genre.genre_id}`}
-                        checked={processedParams.genre.includes(genre.genre_id.toString())}
-                        onCheckedChange={() => {}}
-                      />
-                      <Label htmlFor={`genre-${genre.genre_id}`} className="text-xs">
-                        <Link href={toggleFilter("genre", genre.genre_id.toString())} className="w-full h-full block">
-                          {genre.name}
-                        </Link>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {(processedParams.type.length > 0 ||
-                processedParams.origin.length > 0 ||
-                processedParams.genre.length > 0) && (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="p-2 flex justify-end">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/titles">Clear Filters</Link>
-                    </Button>
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                </>
-              )}
+                </div>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Filter by Origin</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="p-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {filterOptions.origins.map((origin) => (
+                      <div key={origin.origin_id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`origin-${origin.origin_id}`}
+                          name="origin"
+                          value={origin.origin_id.toString()}
+                          defaultChecked={processedParams.origin.includes(origin.origin_id.toString())}
+                        />
+                        <Label htmlFor={`origin-${origin.origin_id}`} className="text-sm">
+                          {origin.country}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Filter by Genre</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="p-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {filterOptions.genres.map((genre) => (
+                      <div key={genre.genre_id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`genre-${genre.genre_id}`}
+                          name="genre"
+                          value={genre.genre_id.toString()}
+                          defaultChecked={processedParams.genre.includes(genre.genre_id.toString())}
+                        />
+                        <Label htmlFor={`genre-${genre.genre_id}`} className="text-sm">
+                          {genre.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator />
+                <div className="p-2 flex justify-between">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/titles?status=${status}`}>Clear Filters</Link>
+                  </Button>
+                  <Button type="submit" size="sm">
+                    Apply Filters
+                  </Button>
+                </div>
+              </form>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <Tabs defaultValue={activeTab} className="w-full">
+      <Tabs defaultValue={status} className="w-full">
         <TabsList>
           <TabsTrigger value="active" asChild>
-            <Link href={createTabURL("active")}>Active Titles</Link>
+            <Link href="/titles?status=active">Active Titles</Link>
           </TabsTrigger>
           <TabsTrigger value="deleted" asChild>
-            <Link href={createTabURL("deleted")}>Deleted Titles</Link>
+            <Link href="/titles?status=deleted">Deleted Titles</Link>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
+        <TabsContent value={status} className="mt-4">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -368,7 +315,7 @@ export default async function TitlesPage({
                   <TableHead className="w-[80px]">
                     <div className="flex items-center space-x-1">
                       <span>ID</span>
-                      <a href={createSortURL("t.title_id")} className="inline-flex">
+                      <a href={createSortURL("t.title_id")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -376,7 +323,7 @@ export default async function TitlesPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Name</span>
-                      <a href={createSortURL("t.name")} className="inline-flex">
+                      <a href={createSortURL("t.name")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -385,7 +332,7 @@ export default async function TitlesPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Release Date</span>
-                      <a href={createSortURL("t.original_release_date")} className="inline-flex">
+                      <a href={createSortURL("t.original_release_date")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -410,7 +357,7 @@ export default async function TitlesPage({
                       <TableCell>{title.title_id}</TableCell>
                       <TableCell className="font-medium">{title.name}</TableCell>
                       <TableCell>{title.type}</TableCell>
-                      <TableCell>{formatDate(title.original_release_date)}</TableCell>
+                      <TableCell>{new Date(title.original_release_date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         {title.country} ({title.language})
                       </TableCell>
@@ -421,12 +368,15 @@ export default async function TitlesPage({
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {title.genres.slice(0, 2).map((genre: string, i: number) => (
-                            <Badge key={i} variant="outline">
-                              {genre}
-                            </Badge>
-                          ))}
-                          {title.genres.length > 2 && <Badge variant="outline">+{title.genres.length - 2}</Badge>}
+                          {title.genres &&
+                            title.genres.slice(0, 2).map((genre: string, i: number) => (
+                              <Badge key={i} variant="outline">
+                                {genre}
+                              </Badge>
+                            ))}
+                          {title.genres && title.genres.length > 2 && (
+                            <Badge variant="outline">+{title.genres.length - 2}</Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -460,15 +410,11 @@ export default async function TitlesPage({
                             <Button
                               variant="ghost"
                               size="icon"
-                              title={activeTab === "active" ? "Delete" : "Restore"}
-                              className={activeTab === "active" ? "text-destructive" : "text-green-600"}
+                              title={status === "active" ? "Delete" : "Restore"}
+                              className={status === "active" ? "text-destructive" : "text-green-600"}
                               type="submit"
                             >
-                              {activeTab === "active" ? (
-                                <Trash className="h-4 w-4" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4" />
-                              )}
+                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
                           </form>
                         </div>

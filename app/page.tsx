@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { TopGenres } from "@/components/top-genres"
 import Link from "next/link"
 
-export const dynamic = "force_dynamic"
+export const dynamic = "force-dynamic"
 
 async function getStats() {
   const [
