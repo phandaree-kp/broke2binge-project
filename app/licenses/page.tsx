@@ -93,7 +93,6 @@ export default async function LicensesPage({
     sort?: string
     order?: string
     status?: string
-    tab?: string
     filter?: string
   }
 }) {
@@ -104,8 +103,8 @@ export default async function LicensesPage({
   }
 
   // Default to active tab if not specified
-  const activeTab = params.tab || "active"
-  params.status = activeTab
+  const status = params.status || "active"
+  params.status = status
 
   // Default filter
   const activeFilter = params.filter || "all"
@@ -113,47 +112,29 @@ export default async function LicensesPage({
   const { data: licenses, total, totalPages, page } = await getLicenses(params)
 
   const createSortURL = (field: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
+    const url = new URLSearchParams()
     const currentSort = searchParams.sort || "l.license_id"
     const currentOrder = searchParams.order || "ASC"
 
-    url.searchParams.set("sort", field)
+    // Copy all existing search params
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (key !== "sort" && key !== "order") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => url.append(key, v))
+        } else if (value) {
+          url.append(key, value)
+        }
+      }
+    })
+
+    url.set("sort", field)
     if (currentSort === field) {
-      url.searchParams.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
+      url.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
     } else {
-      url.searchParams.set("order", "ASC")
+      url.set("order", "ASC")
     }
 
-    return url.search
-  }
-
-  const createTabURL = (tab: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
-
-    // Preserve all existing search params
-    for (const [key, value] of Object.entries(searchParams)) {
-      if (key !== "tab" && key !== "status") {
-        url.searchParams.set(key, value as string)
-      }
-    }
-
-    url.searchParams.set("tab", tab)
-    return url.toString()
-  }
-
-  const createFilterURL = (filter: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
-
-    // Preserve all existing search params
-    for (const [key, value] of Object.entries(searchParams)) {
-      if (key !== "filter" && key !== "page") {
-        url.searchParams.set(key, value as string)
-      }
-    }
-
-    url.searchParams.set("filter", filter)
-    url.searchParams.set("page", "1")
-    return url.toString()
+    return `?${url.toString()}`
   }
 
   return (
@@ -171,31 +152,35 @@ export default async function LicensesPage({
         <DataTableSearch placeholder="Search licenses..." />
         <div className="flex flex-wrap gap-2">
           <Button variant={activeFilter === "all" ? "default" : "outline"} size="sm" asChild>
-            <Link href={createFilterURL("all")}>All</Link>
+            <a href={`/licenses?status=${status}&filter=all`}>All</a>
           </Button>
           <Button variant={activeFilter === "active" ? "default" : "outline"} size="sm" asChild>
-            <Link href={createFilterURL("active")}>Active</Link>
+            <a href={`/licenses?status=${status}&filter=active`}>Active</a>
           </Button>
           <Button variant={activeFilter === "inactive" ? "default" : "outline"} size="sm" asChild>
-            <Link href={createFilterURL("inactive")}>Inactive</Link>
+            <a href={`/licenses?status=${status}&filter=inactive`}>Inactive</a>
           </Button>
           <Button variant={activeFilter === "expiring" ? "default" : "outline"} size="sm" asChild>
-            <Link href={createFilterURL("expiring")}>Expiring Soon</Link>
+            <a href={`/licenses?status=${status}&filter=expiring`}>Expiring Soon</a>
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue={activeTab} className="w-full">
+      <Tabs defaultValue={status} className="w-full">
         <TabsList>
-          <TabsTrigger value="active" asChild>
-            <Link href={createTabURL("active")}>Active Licenses</Link>
+          <TabsTrigger value="active">
+            <a href={`/licenses?status=active${activeFilter !== "all" ? `&filter=${activeFilter}` : ""}`}>
+              Active Licenses
+            </a>
           </TabsTrigger>
-          <TabsTrigger value="deleted" asChild>
-            <Link href={createTabURL("deleted")}>Deleted Licenses</Link>
+          <TabsTrigger value="deleted">
+            <a href={`/licenses?status=deleted${activeFilter !== "all" ? `&filter=${activeFilter}` : ""}`}>
+              Deleted Licenses
+            </a>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
+        <TabsContent value={status} className="mt-4">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -203,7 +188,7 @@ export default async function LicensesPage({
                   <TableHead className="w-[80px]">
                     <div className="flex items-center space-x-1">
                       <span>ID</span>
-                      <a href={createSortURL("l.license_id")} className="inline-flex">
+                      <a href={createSortURL("l.license_id")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -211,7 +196,7 @@ export default async function LicensesPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Title</span>
-                      <a href={createSortURL("t.name")} className="inline-flex">
+                      <a href={createSortURL("t.name")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -219,7 +204,7 @@ export default async function LicensesPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Provider</span>
-                      <a href={createSortURL("cp.name")} className="inline-flex">
+                      <a href={createSortURL("cp.name")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -227,7 +212,7 @@ export default async function LicensesPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Start Date</span>
-                      <a href={createSortURL("l.start_date")} className="inline-flex">
+                      <a href={createSortURL("l.start_date")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -235,7 +220,7 @@ export default async function LicensesPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>End Date</span>
-                      <a href={createSortURL("l.end_date")} className="inline-flex">
+                      <a href={createSortURL("l.end_date")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -300,11 +285,11 @@ export default async function LicensesPage({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                title={activeTab === "active" ? "Delete" : "Restore"}
-                                className={activeTab === "active" ? "text-destructive" : "text-green-600"}
+                                title={status === "active" ? "Delete" : "Restore"}
+                                className={status === "active" ? "text-destructive" : "text-green-600"}
                                 type="submit"
                               >
-                                {activeTab === "active" ? (
+                                {status === "active" ? (
                                   <Trash className="h-4 w-4" />
                                 ) : (
                                   <RefreshCw className="h-4 w-4" />

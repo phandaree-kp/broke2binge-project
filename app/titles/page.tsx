@@ -299,11 +299,11 @@ export default async function TitlesPage({
 
       <Tabs defaultValue={status} className="w-full">
         <TabsList>
-          <TabsTrigger value="active" asChild>
-            <Link href="/titles?status=active">Active Titles</Link>
+          <TabsTrigger value="active">
+            <a href="/titles?status=active">Active Titles</a>
           </TabsTrigger>
-          <TabsTrigger value="deleted" asChild>
-            <Link href="/titles?status=deleted">Deleted Titles</Link>
+          <TabsTrigger value="deleted">
+            <a href="/titles?status=deleted">Deleted Titles</a>
           </TabsTrigger>
         </TabsList>
 

@@ -73,7 +73,6 @@ export default async function AdminsPage({
     sort?: string
     order?: string
     status?: string
-    tab?: string
   }
 }) {
   // Default to showing all admins
@@ -83,31 +82,35 @@ export default async function AdminsPage({
   }
 
   // Default to active tab if not specified
-  const activeTab = params.tab || "active"
-  params.status = activeTab
+  const status = params.status || "active"
+  params.status = status
 
   const { data: admins, total, totalPages, page } = await getAdmins(params)
 
   const createSortURL = (field: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
+    const url = new URLSearchParams()
     const currentSort = searchParams.sort || "a.admin_id"
     const currentOrder = searchParams.order || "ASC"
 
-    url.searchParams.set("sort", field)
+    // Copy all existing search params
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (key !== "sort" && key !== "order") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => url.append(key, v))
+        } else if (value) {
+          url.append(key, value)
+        }
+      }
+    })
+
+    url.set("sort", field)
     if (currentSort === field) {
-      url.searchParams.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
+      url.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
     } else {
-      url.searchParams.set("order", "ASC")
+      url.set("order", "ASC")
     }
 
-    return url.search
-  }
-
-  const createTabURL = (tab: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
-    url.searchParams.set("tab", tab)
-    url.searchParams.delete("page")
-    return url.toString()
+    return `?${url.toString()}`
   }
 
   return (
@@ -125,17 +128,17 @@ export default async function AdminsPage({
         <DataTableSearch placeholder="Search admins..." />
       </div>
 
-      <Tabs defaultValue={activeTab} className="w-full">
+      <Tabs defaultValue={status} className="w-full">
         <TabsList>
-          <TabsTrigger value="active" asChild>
-            <Link href={createTabURL("active")}>Active Admins</Link>
+          <TabsTrigger value="active">
+            <a href="/admins?status=active">Active Admins</a>
           </TabsTrigger>
-          <TabsTrigger value="deleted" asChild>
-            <Link href={createTabURL("deleted")}>Deleted Admins</Link>
+          <TabsTrigger value="deleted">
+            <a href="/admins?status=deleted">Deleted Admins</a>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
+        <TabsContent value={status} className="mt-4">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -143,7 +146,7 @@ export default async function AdminsPage({
                   <TableHead className="w-[80px]">
                     <div className="flex items-center space-x-1">
                       <span>ID</span>
-                      <a href={createSortURL("a.admin_id")} className="inline-flex">
+                      <a href={createSortURL("a.admin_id")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -151,7 +154,7 @@ export default async function AdminsPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Username</span>
-                      <a href={createSortURL("a.username")} className="inline-flex">
+                      <a href={createSortURL("a.username")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -160,7 +163,7 @@ export default async function AdminsPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Role</span>
-                      <a href={createSortURL("a.role")} className="inline-flex">
+                      <a href={createSortURL("a.role")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -168,7 +171,7 @@ export default async function AdminsPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Created Date</span>
-                      <a href={createSortURL("a.created_date")} className="inline-flex">
+                      <a href={createSortURL("a.created_date")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -209,15 +212,11 @@ export default async function AdminsPage({
                             <Button
                               variant="ghost"
                               size="icon"
-                              title={activeTab === "active" ? "Delete" : "Restore"}
-                              className={activeTab === "active" ? "text-destructive" : "text-green-600"}
+                              title={status === "active" ? "Delete" : "Restore"}
+                              className={status === "active" ? "text-destructive" : "text-green-600"}
                               type="submit"
                             >
-                              {activeTab === "active" ? (
-                                <Trash className="h-4 w-4" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4" />
-                              )}
+                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
                           </form>
                         </div>

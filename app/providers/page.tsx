@@ -75,7 +75,6 @@ export default async function ProvidersPage({
     sort?: string
     order?: string
     status?: string
-    tab?: string
   }
 }) {
   // Default to showing all providers
@@ -85,31 +84,34 @@ export default async function ProvidersPage({
   }
 
   // Default to active tab if not specified
-  const activeTab = params.tab || "active"
-  params.status = activeTab
+  const status = params.status || "active"
 
   const { data: providers, total, totalPages, page } = await getProviders(params)
 
   const createSortURL = (field: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
+    const url = new URLSearchParams()
     const currentSort = searchParams.sort || "cp.provider_id"
     const currentOrder = searchParams.order || "ASC"
 
-    url.searchParams.set("sort", field)
+    // Copy all existing search params
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (key !== "sort" && key !== "order") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => url.append(key, v))
+        } else if (value) {
+          url.append(key, value)
+        }
+      }
+    })
+
+    url.set("sort", field)
     if (currentSort === field) {
-      url.searchParams.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
+      url.set("order", currentOrder === "ASC" ? "DESC" : "ASC")
     } else {
-      url.searchParams.set("order", "ASC")
+      url.set("order", "ASC")
     }
 
-    return url.search
-  }
-
-  const createTabURL = (tab: string) => {
-    const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost")
-    url.searchParams.set("tab", tab)
-    url.searchParams.delete("page")
-    return url.toString()
+    return `?${url.toString()}`
   }
 
   return (
@@ -127,17 +129,17 @@ export default async function ProvidersPage({
         <DataTableSearch placeholder="Search providers..." />
       </div>
 
-      <Tabs defaultValue={activeTab} className="w-full">
+      <Tabs defaultValue={status} className="w-full">
         <TabsList>
-          <TabsTrigger value="active" asChild>
-            <Link href={createTabURL("active")}>Active Providers</Link>
+          <TabsTrigger value="active">
+            <a href="/providers?status=active">Active Providers</a>
           </TabsTrigger>
-          <TabsTrigger value="deleted" asChild>
-            <Link href={createTabURL("deleted")}>Deleted Providers</Link>
+          <TabsTrigger value="deleted">
+            <a href="/providers?status=deleted">Deleted Providers</a>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
+        <TabsContent value={status} className="mt-4">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -145,7 +147,7 @@ export default async function ProvidersPage({
                   <TableHead className="w-[80px]">
                     <div className="flex items-center space-x-1">
                       <span>ID</span>
-                      <a href={createSortURL("cp.provider_id")} className="inline-flex">
+                      <a href={createSortURL("cp.provider_id")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -153,7 +155,7 @@ export default async function ProvidersPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Name</span>
-                      <a href={createSortURL("cp.name")} className="inline-flex">
+                      <a href={createSortURL("cp.name")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -163,7 +165,7 @@ export default async function ProvidersPage({
                   <TableHead>
                     <div className="flex items-center space-x-1">
                       <span>Licenses</span>
-                      <a href={createSortURL("license_count")} className="inline-flex">
+                      <a href={createSortURL("license_count")}>
                         <ArrowUpDown className="h-4 w-4" />
                       </a>
                     </div>
@@ -209,15 +211,11 @@ export default async function ProvidersPage({
                             <Button
                               variant="ghost"
                               size="icon"
-                              title={activeTab === "active" ? "Delete" : "Restore"}
-                              className={activeTab === "active" ? "text-destructive" : "text-green-600"}
+                              title={status === "active" ? "Delete" : "Restore"}
+                              className={status === "active" ? "text-destructive" : "text-green-600"}
                               type="submit"
                             >
-                              {activeTab === "active" ? (
-                                <Trash className="h-4 w-4" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4" />
-                              )}
+                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
                           </form>
                         </div>
