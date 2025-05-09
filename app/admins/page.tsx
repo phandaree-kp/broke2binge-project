@@ -6,6 +6,7 @@ import { Plus, ArrowUpDown, Edit, Trash, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { Pagination } from "@/components/pagination"
 import { DataTableSearch } from "@/components/data-table-search"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toggleAdminStatus } from "@/app/actions/admin-actions"
 import { formatDate } from "@/lib/utils"
 
@@ -127,111 +128,111 @@ export default async function AdminsPage({
         <DataTableSearch placeholder="Search admins..." />
       </div>
 
-      <div className="flex border-b">
-        <a
-          href="/admins?status=active"
-          className={`px-4 py-2 ${status === "active" ? "border-b-2 border-primary font-medium" : ""}`}
-        >
-          Active Admins
-        </a>
-        <a
-          href="/admins?status=deleted"
-          className={`px-4 py-2 ${status === "deleted" ? "border-b-2 border-primary font-medium" : ""}`}
-        >
-          Deleted Admins
-        </a>
-      </div>
+      <Tabs defaultValue={status} className="w-full">
+        <TabsList>
+          <TabsTrigger value="active">
+            <a href="/admins?status=active" className="w-full h-full block">
+              Active Admins
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value="deleted">
+            <a href="/admins?status=deleted" className="w-full h-full block">
+              Deleted Admins
+            </a>
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="mt-4">
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">
-                  <div className="flex items-center space-x-1">
-                    <span>ID</span>
-                    <a href={createSortURL("a.admin_id")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center space-x-1">
-                    <span>Username</span>
-                    <a href={createSortURL("a.username")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>
-                  <div className="flex items-center space-x-1">
-                    <span>Role</span>
-                    <a href={createSortURL("a.role")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center space-x-1">
-                    <span>Created Date</span>
-                    <a href={createSortURL("a.created_date")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {admins.length === 0 ? (
+        <TabsContent value={status} className="mt-4">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    No results found.
-                  </TableCell>
+                  <TableHead className="w-[80px]">
+                    <div className="flex items-center space-x-1">
+                      <span>ID</span>
+                      <a href={createSortURL("a.admin_id")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Username</span>
+                      <a href={createSortURL("a.username")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Role</span>
+                      <a href={createSortURL("a.role")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Created Date</span>
+                      <a href={createSortURL("a.created_date")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                admins.map((admin) => (
-                  <TableRow key={admin.admin_id}>
-                    <TableCell>{admin.admin_id}</TableCell>
-                    <TableCell className="font-medium">{admin.username}</TableCell>
-                    <TableCell>{admin.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{admin.role}</Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(admin.created_date)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/admins/${admin.admin_id}/edit`} title="Edit">
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <form
-                          action={async () => {
-                            "use server"
-                            await toggleAdminStatus(admin.admin_id.toString(), admin.is_deleted)
-                          }}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={status === "active" ? "Delete" : "Restore"}
-                            className={status === "active" ? "text-destructive" : "text-green-600"}
-                            type="submit"
-                          >
-                            {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-                          </Button>
-                        </form>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {admins.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No results found.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+                ) : (
+                  admins.map((admin) => (
+                    <TableRow key={admin.admin_id}>
+                      <TableCell>{admin.admin_id}</TableCell>
+                      <TableCell className="font-medium">{admin.username}</TableCell>
+                      <TableCell>{admin.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{admin.role}</Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(admin.created_date)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/admins/${admin.admin_id}/edit`} title="Edit">
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <form
+                            action={async () => {
+                              "use server"
+                              await toggleAdminStatus(admin.admin_id.toString(), admin.is_deleted)
+                            }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={status === "active" ? "Delete" : "Restore"}
+                              className={status === "active" ? "text-destructive" : "text-green-600"}
+                              type="submit"
+                            >
+                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                            </Button>
+                          </form>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Pagination currentPage={page} totalPages={totalPages} totalItems={total} />
     </div>

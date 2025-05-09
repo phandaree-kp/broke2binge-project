@@ -13,9 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toggleTitleStatus } from "@/app/actions/title-actions"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { toggleTitleStatus } from "@/app/actions/title-actions"
 
 export const dynamic = "force-dynamic"
 
@@ -296,140 +297,140 @@ export default async function TitlesPage({
         </div>
       </div>
 
-      <div className="flex border-b">
-        <a
-          href="/titles?status=active"
-          className={`px-4 py-2 ${status === "active" ? "border-b-2 border-primary font-medium" : ""}`}
-        >
-          Active Titles
-        </a>
-        <a
-          href="/titles?status=deleted"
-          className={`px-4 py-2 ${status === "deleted" ? "border-b-2 border-primary font-medium" : ""}`}
-        >
-          Deleted Titles
-        </a>
-      </div>
+      <Tabs defaultValue={status} className="w-full">
+        <TabsList>
+          <TabsTrigger value="active">
+            <a href="/titles?status=active" className="w-full h-full block">
+              Active Titles
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value="deleted">
+            <a href="/titles?status=deleted" className="w-full h-full block">
+              Deleted Titles
+            </a>
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="mt-4">
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">
-                  <div className="flex items-center space-x-1">
-                    <span>ID</span>
-                    <a href={createSortURL("t.title_id")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center space-x-1">
-                    <span>Name</span>
-                    <a href={createSortURL("t.name")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>
-                  <div className="flex items-center space-x-1">
-                    <span>Release Date</span>
-                    <a href={createSortURL("t.original_release_date")}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </a>
-                  </div>
-                </TableHead>
-                <TableHead>Origin</TableHead>
-                <TableHead>Seasons/Episodes</TableHead>
-                <TableHead>Genres</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {titles.length === 0 ? (
+        <TabsContent value={status} className="mt-4">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    No results found.
-                  </TableCell>
+                  <TableHead className="w-[80px]">
+                    <div className="flex items-center space-x-1">
+                      <span>ID</span>
+                      <a href={createSortURL("t.title_id")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Name</span>
+                      <a href={createSortURL("t.name")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>
+                    <div className="flex items-center space-x-1">
+                      <span>Release Date</span>
+                      <a href={createSortURL("t.original_release_date")}>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TableHead>
+                  <TableHead>Origin</TableHead>
+                  <TableHead>Seasons/Episodes</TableHead>
+                  <TableHead>Genres</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                titles.map((title) => (
-                  <TableRow key={title.title_id}>
-                    <TableCell>{title.title_id}</TableCell>
-                    <TableCell className="font-medium">{title.name}</TableCell>
-                    <TableCell>{title.type}</TableCell>
-                    <TableCell>{new Date(title.original_release_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      {title.country} ({title.language})
-                    </TableCell>
-                    <TableCell>
-                      {title.type === "Movie"
-                        ? "N/A"
-                        : `${title.season_count !== null ? title.season_count : 0} seasons / ${title.episode_count !== null ? title.episode_count : 0} episodes`}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {title.genres &&
-                          title.genres.slice(0, 2).map((genre: string, i: number) => (
-                            <Badge key={i} variant="outline">
-                              {genre}
-                            </Badge>
-                          ))}
-                        {title.genres && title.genres.length > 2 && (
-                          <Badge variant="outline">+{title.genres.length - 2}</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={title.is_original ? "default" : "secondary"}>
-                        {title.is_original ? "Original" : "Licensed"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/titles/${title.title_id}`} title="View">
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/titles/${title.title_id}/edit`} title="Edit">
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/titles/${title.title_id}/history`} title="History">
-                            <History className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <form
-                          action={async () => {
-                            "use server"
-                            await toggleTitleStatus(title.title_id.toString(), title.is_deleted)
-                          }}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={status === "active" ? "Delete" : "Restore"}
-                            className={status === "active" ? "text-destructive" : "text-green-600"}
-                            type="submit"
-                          >
-                            {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-                          </Button>
-                        </form>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {titles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                      No results found.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+                ) : (
+                  titles.map((title) => (
+                    <TableRow key={title.title_id}>
+                      <TableCell>{title.title_id}</TableCell>
+                      <TableCell className="font-medium">{title.name}</TableCell>
+                      <TableCell>{title.type}</TableCell>
+                      <TableCell>{new Date(title.original_release_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {title.country} ({title.language})
+                      </TableCell>
+                      <TableCell>
+                        {title.type === "Movie"
+                          ? "N/A"
+                          : `${title.season_count !== null ? title.season_count : 0} seasons / ${title.episode_count !== null ? title.episode_count : 0} episodes`}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {title.genres &&
+                            title.genres.slice(0, 2).map((genre: string, i: number) => (
+                              <Badge key={i} variant="outline">
+                                {genre}
+                              </Badge>
+                            ))}
+                          {title.genres && title.genres.length > 2 && (
+                            <Badge variant="outline">+{title.genres.length - 2}</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={title.is_original ? "default" : "secondary"}>
+                          {title.is_original ? "Original" : "Licensed"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/titles/${title.title_id}`} title="View">
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/titles/${title.title_id}/edit`} title="Edit">
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/titles/${title.title_id}/history`} title="History">
+                              <History className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <form
+                            action={async () => {
+                              "use server"
+                              await toggleTitleStatus(title.title_id.toString(), title.is_deleted)
+                            }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={status === "active" ? "Delete" : "Restore"}
+                              className={status === "active" ? "text-destructive" : "text-green-600"}
+                              type="submit"
+                            >
+                              {status === "active" ? <Trash className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                            </Button>
+                          </form>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Pagination currentPage={page} totalPages={totalPages} totalItems={total} />
     </div>
